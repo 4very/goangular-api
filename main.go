@@ -1,17 +1,17 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"github.com/sommea/goangular-api/config"
+	routes "github.com/sommea/goangular-api/routes"
 )
 
 func main() {
+	config.Connect()
+
 	r := gin.Default()
 
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"data": "hello world"})
-	})
+	routes.Routes(r)
 
 	r.Run()
 }
