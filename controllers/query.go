@@ -19,7 +19,6 @@ func GetAllPlayers(c *gin.Context) {
 			"status":  http.StatusInternalServerError,
 			"message": "Something went wrong",
 		})
-		return
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"status":  http.StatusOK,
@@ -39,32 +38,43 @@ func CreatePlayer(c *gin.Context) {
 		})
 		return
 	}
-	var players []st.Player
-	exists, _ := dbConnect.Model(&players).Where("PID = ?", player.PID).Exists()
 
+	code, ret := createPlayer(player.PID)
+	c.JSON(code, ret)
+}
+
+func playerExists(pid int64) bool {
+	var players []st.Player
+	exists, _ := dbConnect.Model(&players).Where("PID = ?", pid).Exists()
+	return exists
+
+}
+
+func createPlayer(pid int64) (int, gin.H) {
+
+	exists := playerExists(pid)
 	if exists {
-		c.JSON(http.StatusConflict, gin.H{
+		return http.StatusConflict, gin.H{
 			"status":  http.StatusConflict,
 			"message": "Player already exists in database",
-		})
-		return
+		}
 	}
 
-	p := wcl.GetUserData(player.PID)
+	p := wcl.GetUserData(pid)
 	ret, insertError := insertPlayer(p)
 
 	if !ret {
 		log.Printf("Error while inserting new Player into db, Reason: %v\n", insertError)
-		c.JSON(http.StatusInternalServerError, gin.H{
+		return http.StatusInternalServerError, gin.H{
 			"status":  http.StatusInternalServerError,
 			"message": "Something went wrong",
-		})
+		}
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	return http.StatusCreated, gin.H{
 		"status":  http.StatusCreated,
 		"message": "Player created Successfully",
-	})
+	}
 }
 
 func GetPlayer(c *gin.Context) {
@@ -115,6 +125,97 @@ func GetAllGuilds(c *gin.Context) {
 	})
 }
 
+func guildExists(gid int64) bool {
+	var guilds []st.Guild
+	exists, _ := dbConnect.Model(&guilds).Where("GID = ?", gid).Exists()
+	return exists
+}
+
+func getGuild(gid int64) st.Guild {
+	var guild st.Guild
+	dbConnect.Model(&guild).Where("GID = ?", gid).Select()
+	return guild
+}
+
+func GetGuild(c *gin.Context) {
+	var guild st.Guild
+	c.BindJSON(&guild)
+
+	if guild.GID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "Please include a Guild id",
+		})
+		return
+	}
+
+	var guilds []st.Guild
+	err := dbConnect.Model(&guilds).Where("PID = ?", guild.GID).Select()
+
+	if err != nil {
+		log.Printf("Error while getting player %v, Reason: %v\n", guild.GID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":  http.StatusOK,
+		"message": "Get Player",
+		"data":    guilds,
+	})
+}
+
+func createGuild(gid int64) (int, gin.H) {
+
+	gdata, psdata := wcl.GetGuildData(gid)
+
+	exists := guildExists(gid)
+	if exists {
+		return http.StatusConflict, gin.H{
+			"status":  http.StatusConflict,
+			"message": "Guild already exists in database",
+		}
+	}
+
+	guuid := uuid.New().String()
+	gdata.GUUID = guuid
+
+	ret, insertError := insertGuild(gdata)
+
+	for _, elt := range psdata {
+		if playerExists(elt.PID) {
+			continue
+		}
+
+		elt.GUUID = guuid
+		pret, pinsertError := insertPlayer(elt)
+		if !pret {
+			log.Printf("Error while inserting new Player into db, Reason: %v\n", pinsertError)
+			return http.StatusInternalServerError, gin.H{
+				"status":  http.StatusInternalServerError,
+				"message": "Something went wrong",
+			}
+		}
+	}
+
+	if !ret {
+		log.Printf("Error while inserting new Guild into db, Reason: %v\n", insertError)
+		return http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		}
+
+	}
+
+	return http.StatusCreated, gin.H{
+		"status":  http.StatusCreated,
+		"message": "Guild created Successfully",
+	}
+
+}
+
 func CreateGuild(c *gin.Context) {
 	var guild st.Guild
 	c.BindJSON(&guild)
@@ -122,53 +223,107 @@ func CreateGuild(c *gin.Context) {
 	if guild.GID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  http.StatusBadRequest,
-			"message": "Please include a player id",
-		})
-		return
-	}
-	var players []st.Player
-	exists, _ := dbConnect.Model(&players).Where("PID = ?", guild.GID).Exists()
-
-	if exists {
-		c.JSON(http.StatusConflict, gin.H{
-			"status":  http.StatusConflict,
-			"message": "Player already exists in database",
+			"message": "Please include a guild id",
 		})
 		return
 	}
 
-	gdata, psdata := wcl.GetGuildData(guild.GID)
+	code, ret := createGuild(guild.GID)
+	c.JSON(code, ret)
 
-	gid := uuid.New().String()
-	gdata.GUUID = gid
+}
 
-	ret, insertError := insertGuild(gdata)
+func createReport(rid string) (int, gin.H) {
 
-	for _, elt := range psdata {
-		elt.GUUID = gid
-		pret, pinsertError := insertPlayer(elt)
+	rdata, fsdata, gid := wcl.GetReportData(rid)
+
+	if !guildExists(gid) {
+		createGuild(gid)
+	}
+	guild := getGuild(gid)
+
+	ruuid := uuid.New().String()
+
+	for _, elt := range fsdata {
+		elt.RUUID = ruuid
+		elt.FUUID = uuid.New().String()
+		pret, pinsertError := insertFight(elt)
 		if !pret {
 			log.Printf("Error while inserting new Player into db, Reason: %v\n", pinsertError)
-			c.JSON(http.StatusInternalServerError, gin.H{
+			return http.StatusInternalServerError, gin.H{
 				"status":  http.StatusInternalServerError,
 				"message": "Something went wrong",
-			})
-			return
+			}
 		}
 
 	}
 
+	rdata.GUUID = guild.GUUID
+	rdata.RUUID = ruuid
+	ret, insertError := insertReport(rdata)
+
 	if !ret {
 		log.Printf("Error while inserting new Guild into db, Reason: %v\n", insertError)
-		c.JSON(http.StatusInternalServerError, gin.H{
+		return http.StatusInternalServerError, gin.H{
 			"status":  http.StatusInternalServerError,
 			"message": "Something went wrong",
+		}
+	}
+
+	return http.StatusCreated, gin.H{
+		"status":  http.StatusCreated,
+		"message": "Report created Successfully",
+	}
+
+}
+
+func CreateReport(c *gin.Context) {
+	var report st.Report
+	c.BindJSON(&report)
+
+	if report.RID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "Please include a Report id",
 		})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"status":  http.StatusCreated,
-		"message": "Guild created Successfully",
+	code, json := createReport(report.RID)
+	c.JSON(code, json)
+
+}
+
+func GetAllReports(c *gin.Context) {
+	var reports []st.Report
+	err := dbConnect.Model(&reports).Select()
+	if err != nil {
+		log.Printf("Error while getting all reports, Reason: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":  http.StatusOK,
+		"message": "All Reports",
+		"data":    reports,
+	})
+}
+
+func GetAllFights(c *gin.Context) {
+	var fights []st.Fight
+	err := dbConnect.Model(&fights).Select()
+	if err != nil {
+		log.Printf("Error while getting all Fights, Reason: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":  http.StatusOK,
+		"message": "All Fights",
+		"data":    fights,
 	})
 }

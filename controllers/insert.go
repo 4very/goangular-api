@@ -9,16 +9,21 @@ import (
 
 func insertPlayer(p st.Player) (bool, error) {
 
-	exists, _ := dbConnect.Model(&p).Where("PID = ?", p.PID).Exists()
-	if exists {
-		return false, nil
-	}
-
 	p.PUUID = uuid.New().String()
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = time.Now()
-
 	insertError := dbConnect.Insert(&p)
+	if insertError != nil {
+		return false, insertError
+	}
+	return true, nil
+}
+
+func insertGuild(g st.Guild) (bool, error) {
+
+	g.CreatedAt = time.Now()
+	g.UpdatedAt = time.Now()
+	insertError := dbConnect.Insert(&g)
 	if insertError != nil {
 		return false, insertError
 	}
@@ -26,12 +31,21 @@ func insertPlayer(p st.Player) (bool, error) {
 
 }
 
-func insertGuild(g st.Guild) (bool, error) {
+func insertReport(r st.Report) (bool, error) {
+	r.CreatedAt = time.Now()
+	r.UpdatedAt = time.Now()
 
-	g.CreatedAt = time.Now()
-	g.UpdatedAt = time.Now()
+	insertError := dbConnect.Insert(&r)
+	if insertError != nil {
+		return false, insertError
+	}
+	return true, nil
 
-	insertError := dbConnect.Insert(&g)
+}
+
+func insertFight(f st.Fight) (bool, error) {
+
+	insertError := dbConnect.Insert(&f)
 	if insertError != nil {
 		return false, insertError
 	}

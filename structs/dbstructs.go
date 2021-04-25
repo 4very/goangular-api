@@ -27,7 +27,7 @@ type Report struct {
 	GUUID     string    `json:"GUUID"`
 	RID       string    `json:"RID"`
 	Name      string    `json:"Name"`
-	NumFights int64     `json:"NumFights"`
+	NumFights int       `json:"NumFights"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -35,7 +35,7 @@ type Report struct {
 type Fight struct {
 	FUUID     string `json:"FUUID"`
 	RUUID     string `json:"RUUID"`
-	Fnum      int64  `json:"Fnum"`
+	Fnum      int    `json:"Fnum"`
 	Eid       int64  `json:"Eid"`
 	ComParsed bool   `json:"ComParsed"`
 }

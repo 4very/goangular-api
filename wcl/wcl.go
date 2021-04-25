@@ -154,18 +154,6 @@ type GuildMemberQuery struct {
 	} `Json:"data"`
 }
 
-type GuildLastPage struct {
-	Data struct {
-		GuildData struct {
-			Guild struct {
-				Members struct {
-					LastPage int `Json:"total"`
-				} `Json:"members"`
-			} `Json:"guild"`
-		} `Json:"guildData"`
-	} `Json:"data"`
-}
-
 type GuildRet struct {
 	Name   string
 	Server string
@@ -232,4 +220,71 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 		Name:   rstruct.Data.GuildData.Guild.Name,
 	}
 	return gret, ps
+}
+
+// {
+// 	reportData {
+// 	  report(code: "y6X1BZJPCYgwRrNn") {
+// 		fights(difficulty:5, encounterID:2417){
+// 		  name
+// 		  difficulty
+// 		  encounterID
+// 		}
+// 	  }
+// 	}
+//   }
+
+type ReportDataQuery struct {
+	Data struct {
+		ReportData struct {
+			Report struct {
+				Title string `Json:"title"`
+				Guild struct {
+					Id int64 `Json:"id"`
+				} `Json:"guild"`
+				Fights []struct {
+					EID int64 `Json:"encounterID"`
+				} `Json:"fights"`
+			} `Json:"report"`
+		} `Json:"reportData"`
+	} `Json:"data"`
+}
+
+func GetReportData(RID string) (st.Report, []st.Fight, int64) {
+
+	reportq := `{
+		reportData {
+		  report(code: "` + fmt.Sprint(RID) + `") {
+			title
+			guild{
+			  id
+			}
+			fights{
+				encounterID
+			}
+		  }
+		}
+	  }
+	`
+
+	rstruct := ReportDataQuery{}
+	query(reportq, &rstruct)
+
+	var fights []st.Fight
+
+	for i, elt := range rstruct.Data.ReportData.Report.Fights {
+		fights = append(fights, st.Fight{
+			Fnum: i + 1,
+			Eid:  elt.EID,
+		})
+	}
+
+	report := st.Report{
+		RID:       RID,
+		Name:      rstruct.Data.ReportData.Report.Title,
+		NumFights: len(fights) + 1,
+	}
+
+	return report, fights, rstruct.Data.ReportData.Report.Guild.Id
+
 }

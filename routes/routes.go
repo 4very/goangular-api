@@ -14,6 +14,9 @@ func Routes(router *gin.Engine) {
 	router.POST("/players", controllers.CreatePlayer)
 	router.GET("/guilds", controllers.GetAllGuilds)
 	router.POST("/guilds", controllers.CreateGuild)
+	router.POST("/report", controllers.CreateReport)
+	router.GET("/report", controllers.GetAllReports)
+	router.GET("/fight", controllers.GetAllFights)
 
 }
 func welcome(c *gin.Context) {
