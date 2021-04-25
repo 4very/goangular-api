@@ -140,8 +140,7 @@ type GuildMemberQuery struct {
 		GuildData struct {
 			Guild struct {
 				Members struct {
-					MorePages bool `Json:"has_more_pages"`
-					Data      []struct {
+					Data []struct {
 						Id      int64  `Json:"id"`
 						Name    string `Json:"Name"`
 						ClassID int    `Json:"classID"`
@@ -149,6 +148,18 @@ type GuildMemberQuery struct {
 							Name string `Json:"Name"`
 						} `Json:"Server"`
 					} `Json:"data"`
+				} `Json:"members"`
+			} `Json:"guild"`
+		} `Json:"guildData"`
+	} `Json:"data"`
+}
+
+type GuildLastPage struct {
+	Data struct {
+		GuildData struct {
+			Guild struct {
+				Members struct {
+					LastPage int `Json:"total"`
 				} `Json:"members"`
 			} `Json:"guild"`
 		} `Json:"guildData"`
@@ -163,12 +174,13 @@ type GuildRet struct {
 
 func GetGuildData(id int64) (st.Guild, []st.Player) {
 	var ps []st.Player
+	var page int = 1
+
 	for {
 		memberq := `{
 			guildData{
 			  guild(id: ` + fmt.Sprint(id) + `){
-				members(limit: 100){
-				  has_more_pages
+				members(limit: 100, page: ` + fmt.Sprint(page) + `){
 				  data{
 					id
 					name
@@ -180,10 +192,14 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 				}
 			  }
 			}
-		  }
-        `
+		  }`
+
 		rstruct := GuildMemberQuery{}
 		query(memberq, &rstruct)
+
+		if len(rstruct.Data.GuildData.Guild.Members.Data) == 0 {
+			break
+		}
 
 		for _, elt := range rstruct.Data.GuildData.Guild.Members.Data {
 			ps = append(ps, st.Player{
@@ -194,9 +210,9 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 			})
 		}
 
-		if !rstruct.Data.GuildData.Guild.Members.MorePages {
-			break
-		}
+		page++
+		fmt.Println(page)
+
 	}
 
 	guildq := `{
@@ -218,6 +234,6 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 		Server: rstruct.Data.GuildData.Guild.Server.Name,
 		Name:   rstruct.Data.GuildData.Guild.Name,
 	}
-
+	fmt.Println(len(ps))
 	return gret, ps
 }
