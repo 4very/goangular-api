@@ -2,37 +2,42 @@ package controllers
 
 import (
 	"log"
+	"reflect"
 
 	"github.com/go-pg/pg"
 	orm "github.com/go-pg/pg/orm"
 	st "github.com/sommea/goangular-api/structs"
 )
 
-// Create User Table
-func CreateTables(db *pg.DB) error {
+func getName(myvar interface{}) string {
+	if t := reflect.TypeOf(myvar); t.Kind() == reflect.Ptr {
+		return "*" + t.Elem().Name()
+	} else {
+		return t.Name()
+	}
+}
+
+func createTable(db *pg.DB, m interface{}) error {
 	opts := &orm.CreateTableOptions{
 		IfNotExists: true,
 	}
-	createError := db.CreateTable(&st.Player{}, opts)
+	createError := db.CreateTable(m, opts)
 	if createError != nil {
-		log.Printf("Error while creating Player table, Reason: %v\n", createError)
+		log.Printf("Error while creating table "+getName(m)+", Reason: %v\n", createError)
 		return createError
 	}
-	log.Printf("Player Table created")
+	log.Printf(getName(m) + " Table created")
+	return nil
+}
 
-	createError = db.CreateTable(&st.Guild{}, opts)
-	if createError != nil {
-		log.Printf("Error while creating Guild table, Reason: %v\n", createError)
-		return createError
-	}
-	log.Printf("Guild Table created")
+// Create User Table
+func CreateTables(db *pg.DB) error {
+	var tables []interface{}
+	tables = append(tables, &st.Guild{}, &st.Player{}, &st.ComData{}, &st.Fight{}, &st.Report{})
 
-	createError = db.CreateTable(&st.Leaderboard{}, opts)
-	if createError != nil {
-		log.Printf("Error while creating Leaderboard table, Reason: %v\n", createError)
-		return createError
+	for _, elt := range tables {
+		createTable(db, elt)
 	}
-	log.Printf("Leaderboard Table created")
 
 	return nil
 }

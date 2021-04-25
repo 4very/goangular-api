@@ -209,10 +209,7 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 				Class:  elt.ClassID,
 			})
 		}
-
 		page++
-		fmt.Println(page)
-
 	}
 
 	guildq := `{
@@ -234,6 +231,5 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 		Server: rstruct.Data.GuildData.Guild.Server.Name,
 		Name:   rstruct.Data.GuildData.Guild.Name,
 	}
-	fmt.Println(len(ps))
 	return gret, ps
 }

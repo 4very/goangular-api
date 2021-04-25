@@ -9,6 +9,11 @@ import (
 
 func insertPlayer(p st.Player) (bool, error) {
 
+	exists, _ := dbConnect.Model(&p).Where("PID = ?", p.PID).Exists()
+	if exists {
+		return false, nil
+	}
+
 	p.PUUID = uuid.New().String()
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = time.Now()
