@@ -33,7 +33,7 @@ func createTable(db *pg.DB, m interface{}) error {
 // Create User Table
 func CreateTables(db *pg.DB) error {
 	var tables []interface{}
-	tables = append(tables, &st.Guild{}, &st.Player{}, &st.ComData{}, &st.Fight{}, &st.Report{})
+	tables = append(tables, &st.Guild{}, &st.Player{}, &st.ComPlayerData{}, &st.Fight{}, &st.Report{}, &st.ComData{})
 
 	for _, elt := range tables {
 		createTable(db, elt)

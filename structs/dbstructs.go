@@ -33,16 +33,27 @@ type Report struct {
 }
 
 type Fight struct {
-	FUUID     string `json:"FUUID"`
-	RUUID     string `json:"RUUID"`
-	Fnum      int    `json:"Fnum"`
-	Eid       int64  `json:"Eid"`
-	ComParsed bool   `json:"ComParsed"`
+	FUUID     string  `json:"FUUID"`
+	RUUID     string  `json:"RUUID"`
+	Fnum      int     `json:"Fnum"`
+	Diff      int     `json:"Diff"`
+	Eid       int64   `json:"Eid"`
+	ComValid  bool    `json:"ComValid"`
+	ComParsed bool    `json:"ComParsed"`
+	StartTime float64 `json:"StartTime"`
+	EndTime   float64 `json:"EndTime"`
 }
 
 type ComData struct {
-	COMUUID string  `json:"COMUUID"`
-	FUUID   string  `json:"FUUID"`
-	PUUID   string  `json:"pUUID"`
-	DPS     float64 `json:"DPS"`
+	COMUUID   string  `json:"COMUUID"`
+	FUUID     string  `json:"FUUID"`
+	StartTime float64 `json:"StartTime"`
+	EndTime   float64 `json:"EndTime"`
+}
+
+type ComPlayerData struct {
+	COMPUUID string  `json:"COMPUUID"`
+	COMUUID  string  `json:"COMUUID"`
+	PUUID    string  `json:"PUUID"`
+	DPS      float64 `json:"DPS"`
 }

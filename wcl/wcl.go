@@ -74,6 +74,35 @@ func query(q string, stuct interface{}) bool {
 	return true
 }
 
+func pquery(q string, stuct interface{}) bool {
+
+	jsonData := map[string]string{
+		"query": q,
+	}
+	jsonValue, _ := json.Marshal(jsonData)
+
+	req, err := http.NewRequest("GET", "https://www.warcraftlogs.com/api/v2/client", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+getToken())
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Error: %v\n", err)
+	}
+	defer resp.Body.Close()
+
+	rbody, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(rbody))
+
+	json.Unmarshal(rbody, &stuct)
+	fmt.Println(stuct)
+	return true
+}
+
 type CharDataQuery struct {
 	Data struct {
 		CharacterData struct {
@@ -222,18 +251,6 @@ func GetGuildData(id int64) (st.Guild, []st.Player) {
 	return gret, ps
 }
 
-// {
-// 	reportData {
-// 	  report(code: "y6X1BZJPCYgwRrNn") {
-// 		fights(difficulty:5, encounterID:2417){
-// 		  name
-// 		  difficulty
-// 		  encounterID
-// 		}
-// 	  }
-// 	}
-//   }
-
 type ReportDataQuery struct {
 	Data struct {
 		ReportData struct {
@@ -243,7 +260,11 @@ type ReportDataQuery struct {
 					Id int64 `Json:"id"`
 				} `Json:"guild"`
 				Fights []struct {
-					EID int64 `Json:"encounterID"`
+					Id          int64   `Json:"id"`
+					StartTime   float64 `Json:"startTime"`
+					EndTime     float64 `Json:"endTime"`
+					EncounterID int64   `Json:"encounterID"`
+					Difficulty  int     `Json:"difficulty"`
 				} `Json:"fights"`
 			} `Json:"report"`
 		} `Json:"reportData"`
@@ -260,7 +281,11 @@ func GetReportData(RID string) (st.Report, []st.Fight, int64) {
 			  id
 			}
 			fights{
+				id
+				startTime
+				endTime
 				encounterID
+				difficulty
 			}
 		  }
 		}
@@ -272,10 +297,21 @@ func GetReportData(RID string) (st.Report, []st.Fight, int64) {
 
 	var fights []st.Fight
 
-	for i, elt := range rstruct.Data.ReportData.Report.Fights {
+	var comvalid bool
+	for _, elt := range rstruct.Data.ReportData.Report.Fights {
+		// EID, _ := elt.EID.Int64()
+		if elt.EncounterID == 2417 && elt.Difficulty == 5 {
+			comvalid = true
+		} else {
+			comvalid = false
+		}
 		fights = append(fights, st.Fight{
-			Fnum: i + 1,
-			Eid:  elt.EID,
+			Fnum:      int(elt.Id),
+			Eid:       elt.EncounterID,
+			StartTime: elt.StartTime,
+			EndTime:   elt.EndTime,
+			Diff:      elt.Difficulty,
+			ComValid:  comvalid,
 		})
 	}
 
@@ -286,5 +322,4 @@ func GetReportData(RID string) (st.Report, []st.Fight, int64) {
 	}
 
 	return report, fights, rstruct.Data.ReportData.Report.Guild.Id
-
 }

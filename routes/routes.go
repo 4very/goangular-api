@@ -9,14 +9,19 @@ import (
 
 func Routes(router *gin.Engine) {
 	router.GET("/", welcome)
-	router.GET("/players", controllers.GetAllPlayers)
-	router.GET("/getplayer", controllers.GetPlayer)
-	router.POST("/players", controllers.CreatePlayer)
-	router.GET("/guilds", controllers.GetAllGuilds)
-	router.POST("/guilds", controllers.CreateGuild)
+
+	router.POST("/player", controllers.CreatePlayer)
+	router.GET("/player", controllers.GetPlayer)
+	router.GET("/player/:path1", controllers.GetPlayerURL)
+
+	router.POST("/guild", controllers.CreateGuild)
+	router.GET("/guild/all", controllers.GetAllGuilds)
+	router.GET("/guild", controllers.GetGuild)
+
 	router.POST("/report", controllers.CreateReport)
-	router.GET("/report", controllers.GetAllReports)
-	router.GET("/fight", controllers.GetAllFights)
+	router.GET("/report/all", controllers.GetAllReports)
+
+	router.GET("/fight/all", controllers.GetAllFights)
 
 }
 func welcome(c *gin.Context) {

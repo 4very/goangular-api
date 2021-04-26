@@ -3,29 +3,13 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	st "github.com/sommea/goangular-api/structs"
 	wcl "github.com/sommea/goangular-api/wcl"
 )
-
-func GetAllPlayers(c *gin.Context) {
-	var players []st.Player
-	err := dbConnect.Model(&players).Select()
-	if err != nil {
-		log.Printf("Error while getting all players, Reason: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  http.StatusInternalServerError,
-			"message": "Something went wrong",
-		})
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"status":  http.StatusOK,
-		"message": "All Player",
-		"data":    players,
-	})
-}
 
 func CreatePlayer(c *gin.Context) {
 	var player st.Player
@@ -77,7 +61,45 @@ func createPlayer(pid int64) (int, gin.H) {
 	}
 }
 
+func getAllPlayers() (int, gin.H) {
+	var players []st.Player
+	err := dbConnect.Model(&players).Select()
+	if err != nil {
+		log.Printf("Error while getting all players, Reason: %v\n", err)
+		return http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		}
+	}
+	return http.StatusOK, gin.H{
+		"status":  http.StatusOK,
+		"message": "All Player",
+		"data":    players,
+	}
+}
+
+func getPlayer(pid int64) (int, gin.H) {
+	var players st.Player
+	err := dbConnect.Model(&players).Where("PID = ?", pid).Select()
+	if err != nil {
+		log.Printf("Error while getting player %v, Reason: %v\n", pid, err)
+		return http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		}
+	}
+	return http.StatusOK, gin.H{
+		"status":  http.StatusOK,
+		"message": "Get Player",
+		"data":    players,
+	}
+}
+
 func GetPlayer(c *gin.Context) {
+
+	if c.Param("path1") != "" {
+		return
+	}
 	var player st.Player
 	c.BindJSON(&player)
 
@@ -89,22 +111,45 @@ func GetPlayer(c *gin.Context) {
 		return
 	}
 
-	var players []st.Player
-	err := dbConnect.Model(&players).Where("PID = ?", player.PID).Select()
+	c.JSON(getPlayer(player.PID))
 
-	if err != nil {
-		log.Printf("Error while getting player %v, Reason: %v\n", player.PID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  http.StatusInternalServerError,
-			"message": "Something went wrong",
+}
+
+func GetPlayerURL(c *gin.Context) {
+
+	path := c.Param("path1")
+
+	if path == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "Please include a player id",
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"status":  http.StatusOK,
-		"message": "Get Player",
-		"data":    players,
-	})
+	if path == "all" {
+		c.JSON(getAllPlayers())
+		return
+	}
+	pid, err := strconv.ParseInt(path, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "Player id is not in the right format, please use /all or a valid player id",
+		})
+		return
+	}
+	if !playerExists(pid) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":  http.StatusNotFound,
+			"message": "Player id doesn't exist"})
+		return
+	}
+
+	var player st.Player
+	c.BindJSON(&player)
+
+	c.JSON(getPlayer(pid))
+
 }
 
 func GetAllGuilds(c *gin.Context) {
