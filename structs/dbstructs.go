@@ -3,7 +3,7 @@ package structs
 import "time"
 
 type Player struct {
-	PUUID     string    `json:"PUUID"`
+	PUUID     string    `json:"PUUID" pg:",pk"`
 	PID       int64     `json:"PID"`
 	Name      string    `json:"Name"`
 	Server    string    `json:"Server"`
@@ -14,7 +14,7 @@ type Player struct {
 }
 
 type Guild struct {
-	GUUID     string    `json:"GUUID"`
+	GUUID     string    `json:"GUUID" pg:",pk"`
 	GID       int64     `json:"GID"`
 	Name      string    `json:"Name"`
 	Server    string    `json:"Server"`
@@ -23,7 +23,7 @@ type Guild struct {
 }
 
 type Report struct {
-	RUUID     string    `json:"RUUID"`
+	RUUID     string    `json:"RUUID" pg:",pk"`
 	GUUID     string    `json:"GUUID"`
 	RID       string    `json:"RID"`
 	Name      string    `json:"Name"`
@@ -33,7 +33,7 @@ type Report struct {
 }
 
 type Fight struct {
-	FUUID     string  `json:"FUUID"`
+	FUUID     string  `json:"FUUID" pg:",pk"`
 	RUUID     string  `json:"RUUID"`
 	Fnum      int     `json:"Fnum"`
 	Diff      int     `json:"Diff"`
@@ -45,14 +45,15 @@ type Fight struct {
 }
 
 type ComData struct {
-	COMUUID   string  `json:"COMUUID"`
+	COMUUID   string  `json:"COMUUID" pg:",pk"`
 	FUUID     string  `json:"FUUID"`
 	StartTime float64 `json:"StartTime"`
 	EndTime   float64 `json:"EndTime"`
+	ComId     int     `json:"ComId"`
 }
 
 type ComPlayerData struct {
-	COMPUUID string  `json:"COMPUUID"`
+	COMPUUID string  `json:"COMPUUID" pg:",pk"`
 	COMUUID  string  `json:"COMUUID"`
 	PUUID    string  `json:"PUUID"`
 	DPS      float64 `json:"DPS"`

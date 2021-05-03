@@ -9,9 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/mitchellh/mapstructure"
 	st "github.com/sommea/goangular-api/structs"
 )
 
@@ -322,4 +325,98 @@ func GetReportData(RID string) (st.Report, []st.Fight, int64) {
 	}
 
 	return report, fights, rstruct.Data.ReportData.Report.Guild.Id
+}
+
+type iTimes struct {
+	Data struct {
+		ReportData struct {
+			Report struct {
+				Events struct {
+					Data []struct {
+						Timestamp     float64 `Json:"timestamp"`
+						Type          string  `Json:"type"`
+						SourceID      int     `Json:"sourceID"`
+						TargetID      int     `Json:"targetID"`
+						AbilityGameID int     `Json:"abilityGameID"`
+						Fight         int     `Json:"fight"`
+					} `Json:"data"`
+				} `Json:"events"`
+			} `Json:"report"`
+		} `Json:"reportData"`
+	} `Json:"data"`
+}
+
+type cEndTimes struct {
+	Data struct {
+		ReportData struct {
+			Report interface{} `Json:"report"`
+		} `Json:"reportData"`
+	} `Json:"data"`
+}
+
+type cInside struct {
+	Data []struct {
+		Timestamp     float64 `Json:"timestamp"`
+		Type          string  `Json:"type"`
+		SourceID      int     `Json:"sourceID"`
+		TargetID      int     `Json:"targetID"`
+		AbilityGameID int     `Json:"abilityGameID"`
+		Fight         int     `Json:"fight"`
+	} `Json:"data"`
+}
+
+func ParseCom(fights []st.Fight, rid string) {
+	sort.Slice(fights[:], func(i, j int) bool {
+		return fights[i].Fnum < fights[j].Fnum
+	})
+
+	comq := `
+	{
+		reportData {
+		  report(code: "` + fmt.Sprint(rid) + `") {
+			events(startTime:0 endTime:` + fmt.Sprint(fights[len(fights)-1].EndTime) + ` hostilityType:Enemies dataType:Buffs abilityID:329636 ){
+			  data
+			}    
+		  }
+		}
+	  }
+	`
+	rstruct := iTimes{}
+	query(comq, &rstruct)
+
+	var comData []st.ComData = make([]st.ComData, len(fights))
+	var qdata []string = make([]string, len(fights))
+
+	for i, elt := range fights {
+		for _, subelt := range rstruct.Data.ReportData.Report.Events.Data {
+			if elt.Fnum == subelt.Fight && subelt.Type == "applybuff" {
+				comData[i].StartTime = subelt.Timestamp
+				comData[i].FUUID = elt.FUUID
+				qdata[i] = `f` + fmt.Sprint(i) + `: events(startTime:` + fmt.Sprint(subelt.Timestamp) + ` endTime:` + fmt.Sprint(elt.EndTime) + ` hostilityType: Enemies dataType:Casts abilityID:339690 limit:1){data}`
+				break
+			}
+		}
+	}
+
+	comq2 := `{reportData {report(code:"` + fmt.Sprint(rid) + `"){` + strings.Join(qdata, "\n") + `}}}`
+	var comEndTimes cEndTimes
+	query(comq2, &comEndTimes)
+
+	q2data := make([]string, len(fights))
+	for key, elt := range comEndTimes.Data.ReportData.Report.(map[string]interface{}) {
+
+		var result cInside
+		mapstructure.Decode(elt, &result)
+
+		i, _ := strconv.Atoi(key[1:])
+		if len(result.Data) == 0 {
+			comData[i].EndTime = fights[i].EndTime
+		} else {
+			comData[i].EndTime = result.Data[0].Timestamp
+		}
+		qdata[i] = `f` + fmt.Sprint(i) + `: table(startTime:` + fmt.Sprint(comData[i].StartTime) + ` endTime:` + fmt.Sprint(comData[i].EndTime) + ` hostilityType: Enemies dataType:Casts abilityID:339690 limit:1){data}`
+
+	}
+
+	fmt.Println(comData)
 }

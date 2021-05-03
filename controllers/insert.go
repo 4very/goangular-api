@@ -52,3 +52,22 @@ func insertFight(f st.Fight) (bool, error) {
 	return true, nil
 
 }
+func insertComData(f st.ComData) (bool, error) {
+
+	insertError := dbConnect.Insert(&f)
+	if insertError != nil {
+		return false, insertError
+	}
+	return true, nil
+
+}
+
+func insertComPlayerData(f st.ComPlayerData) (bool, error) {
+
+	insertError := dbConnect.Insert(&f)
+	if insertError != nil {
+		return false, insertError
+	}
+	return true, nil
+
+}

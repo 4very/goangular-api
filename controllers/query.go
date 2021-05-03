@@ -356,6 +356,23 @@ func GetAllReports(c *gin.Context) {
 	})
 }
 
+func getAllFights() []st.Fight {
+	var fights []st.Fight
+	err := dbConnect.Model(&fights).Select()
+	if err != nil {
+		log.Printf("Error while getting all Fights, Reason: %v\n", err)
+	}
+	return fights
+
+}
+
+func getFightsByReport(rid string) []st.Fight {
+	var fights []st.Fight
+	dbConnect.Model(&fights).Join("JOIN reports AS r ON r.RUUID = fight.RUUID").Where("r.RID = ?", rid).Where("fight.com_valid").Select()
+
+	return fights
+}
+
 func GetAllFights(c *gin.Context) {
 	var fights []st.Fight
 	err := dbConnect.Model(&fights).Select()
@@ -371,4 +388,38 @@ func GetAllFights(c *gin.Context) {
 		"message": "All Fights",
 		"data":    fights,
 	})
+}
+
+func GetAllComData(c *gin.Context) {
+	var comData []st.ComData
+	err := dbConnect.Model(&comData).Select()
+	if err != nil {
+		log.Printf("Error while getting all ComData, Reason: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": "Something went wrong",
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":  http.StatusOK,
+		"message": "All Com Data",
+		"data":    comData,
+	})
+
+}
+
+func UpdateComData(c *gin.Context) {
+	var report st.Report
+	c.BindJSON(&report)
+
+	if report.RID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  http.StatusBadRequest,
+			"message": "Please include a Report id",
+		})
+		return
+	}
+
+	wcl.ParseCom(getFightsByReport(report.RID), report.RID)
+
 }

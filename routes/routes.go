@@ -23,6 +23,9 @@ func Routes(router *gin.Engine) {
 
 	router.GET("/fight/all", controllers.GetAllFights)
 
+	router.GET("/com/data/all", controllers.GetAllComData)
+	router.POST("/com", controllers.UpdateComData)
+
 }
 func welcome(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
